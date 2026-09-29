@@ -1,7 +1,16 @@
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 from flask import Blueprint, jsonify, request
+from openai import OpenAI, OpenAIError
 from src.models.note import Note, db
 
 note_bp = Blueprint('note', __name__)
+ROOT_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(ROOT_DIR / '.env')
+TRANSLATE_PROMPT_PATH = ROOT_DIR / 'prompts' / 'translate_prompt.md'
+OPENROUTER_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b:free'
 
 @note_bp.route('/notes', methods=['GET'])
 def get_notes():
@@ -73,4 +82,47 @@ def search_notes():
     ).order_by(Note.updated_at.desc()).all()
     
     return jsonify([note.to_dict() for note in notes])
+
+@note_bp.route('/notes/translate', methods=['POST'])
+def translate_note_content():
+    data = request.get_json(silent=True) or {}
+    content = data.get('content')
+    target_language = data.get('target_language')
+
+    if not isinstance(content, str) or not content.strip():
+        return jsonify({'error': 'Note content is required for translation.'}), 400
+    if not isinstance(target_language, str) or not target_language.strip():
+        return jsonify({'error': 'Target language is required.'}), 400
+
+    api_key = os.getenv('OPENROUTER_API_KEY')
+    if not api_key:
+        return jsonify({'error': 'Translation is unavailable: OPENROUTER_API_KEY is not configured.'}), 503
+
+    try:
+        system_prompt = TRANSLATE_PROMPT_PATH.read_text(encoding='utf-8').format(
+            target_language=target_language.strip()
+        )
+    except OSError:
+        return jsonify({'error': 'Translation is unavailable: the translation prompt could not be loaded.'}), 500
+
+    try:
+        client = OpenAI(
+            api_key=api_key,
+            base_url='https://openrouter.ai/api/v1',
+        )
+        response = client.chat.completions.create(
+            model=OPENROUTER_MODEL,
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': content},
+            ],
+        )
+    except OpenAIError as exc:
+        return jsonify({'error': f'Translation request failed ({type(exc).__name__}).'}), 502
+
+    choices = response.choices or []
+    translation = choices[0].message.content if choices and choices[0].message else None
+    if not translation:
+        return jsonify({'error': 'Translation service returned an empty result.'}), 502
+    return jsonify({'translation': translation})
 
