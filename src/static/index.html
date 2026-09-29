@@ -559,6 +559,12 @@
                 document.getElementById('emptyState').style.display = 'none';
                 document.getElementById('editorForm').style.display = 'block';
                 document.getElementById('editorActions').style.display = 'flex';
+                this.updateDeleteButton();
+            }
+
+            updateDeleteButton() {
+                const deleteButton = document.getElementById('deleteBtn');
+                deleteButton.style.display = this.currentNote && this.currentNote.id ? '' : 'none';
             }
 
             hideEditor() {
@@ -610,6 +616,7 @@
 
                     const savedNote = await response.json();
                     this.currentNote = savedNote;
+                    this.updateDeleteButton();
                     
                     // Update notes list
                     const existingIndex = this.notes.findIndex(n => n.id === savedNote.id);
