@@ -36,6 +36,11 @@ The application is deployed and accessible at: **https://3dhkilc88dkk.manus.spac
 
 ```
 notetaking-app/
+├── api/
+│   └── index.py             # Vercel Flask function entry point
+├── public/
+│   ├── index.html           # Frontend served locally and on Vercel
+│   └── favicon.ico          # Application icon
 ├── src/
 │   ├── models/
 │   │   ├── user.py          # User model (template)
@@ -43,12 +48,12 @@ notetaking-app/
 │   ├── routes/
 │   │   ├── user.py          # User API routes (template)
 │   │   └── note.py          # Note API endpoints
-│   ├── static/
-│   │   ├── index.html       # Frontend application
-│   │   └── favicon.ico      # Application icon
-│   ├── database/
-│   │   └── app.db           # SQLite database file
 │   └── main.py              # Flask application entry point
+├── database/
+│   └── app.db               # Local SQLite database file
+├── prompts/
+│   └── translate_prompt.md
+├── .python-version          # Vercel Python runtime version
 ├── venv/                    # Python virtual environment
 ├── requirements.txt         # Python dependencies
 └── README.md               # This file
@@ -145,20 +150,22 @@ CREATE TABLE note (
 
 ## 🚀 Deployment
 
-The application is configured for easy deployment with:
-- CORS enabled for cross-origin requests
-- Host binding to `0.0.0.0` for external access
-- Production-ready Flask configuration
-- Persistent SQLite database
+The application uses `api/index.py` as its Vercel function entry point and serves
+static assets from `public/`. `.python-version` pins the Vercel runtime to Python
+3.12. Set `DATABASE_URL` to a PostgreSQL connection URL in Vercel; local runs use
+the repository-root `database/app.db` SQLite file when it is unset.
 
 ## 🔧 Configuration
 
 ### Environment Variables
 - `FLASK_ENV`: Set to `development` for debug mode
-- `SECRET_KEY`: Flask secret key for sessions
+- `SECRET_KEY`: Optional Flask secret key for sessions
+- `DATABASE_URL`: PostgreSQL connection URL; unset uses local SQLite
+- `OPENROUTER_API_KEY`: Enables note translation
 
 ### Database Configuration
-- Database file: `src/database/app.db`
+- Local database file: `database/app.db`
+- PostgreSQL connection: `DATABASE_URL`
 - Automatic table creation on first run
 - SQLAlchemy ORM for database operations
 
